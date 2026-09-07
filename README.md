@@ -33,7 +33,12 @@ A local voice assistant powered by the Gemini API. Say **“Hey Jarvis”** foll
 - “Hey Jarvis, forget my favourite colour.”
 - “Hey Jarvis, what time is it?”
 - “Hey Jarvis, status.”
+- “Hey Jarvis, take note buy oat milk.”
+- “Hey Jarvis, read my notes.”
+- “Hey Jarvis, open Spotify.”
 - “Hey Jarvis, reset conversation.”
+
+Notes are stored only on your computer in `data/notes.json`. JARVIS can safely open a short list of apps—Calendar, Chrome, Finder, Notes, Safari, Spotify, and Visual Studio Code—but it does not run arbitrary shell commands.
 - “Hey Jarvis, shutdown.”
 
 The Gemini Free Tier has model and rate limits. This project uses Gemini's server-side conversation feature for natural multi-turn chat; free-tier API content may be used by Google to improve its products. Do not use it for private or sensitive information.

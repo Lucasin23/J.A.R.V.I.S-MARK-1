@@ -6,6 +6,7 @@ import os
 import argparse
 
 from core.brain import JarvisConfigurationError, load_environment, reset_conversation, think
+from core.skills import LocalSkills
 from voice.listener import VoiceListener
 from voice.speaker import speak
 from voice.wake_word import command_after_wake_word
@@ -21,7 +22,7 @@ def reply(text: str) -> None:
     speak(text)
 
 
-def handle_command(command: str) -> bool:
+def handle_command(command: str, skills: LocalSkills) -> bool:
     """Process a command and return ``False`` only when JARVIS should exit."""
     normalised_command = command.lower().strip()
     if normalised_command in SHUTDOWN_COMMANDS:
@@ -31,6 +32,11 @@ def handle_command(command: str) -> bool:
     if normalised_command in {"reset conversation", "clear conversation"}:
         reset_conversation()
         reply("Conversation reset. Your saved memories are still intact.")
+        return True
+
+    skill_response = skills.handle(command)
+    if skill_response is not None:
+        reply(skill_response)
         return True
 
     try:
@@ -44,6 +50,7 @@ def handle_command(command: str) -> bool:
 def run_text_mode() -> None:
     """Let you test Gemini and local features without using the microphone."""
     print("J.A.R.V.I.S MARK I TEXT MODE. Type 'shutdown' to exit.")
+    skills = LocalSkills()
     while True:
         try:
             command = input("You: ").strip()
@@ -51,7 +58,7 @@ def run_text_mode() -> None:
             print()
             reply("Shutting down. Goodbye.")
             return
-        if command and not handle_command(command):
+        if command and not handle_command(command, skills):
             return
 
 
@@ -60,6 +67,7 @@ def run_voice_mode() -> None:
     print(f"Systems initialized. Say 'Hey {WAKE_WORD.title()}' to begin.\n")
 
     listener = VoiceListener()
+    skills = LocalSkills()
     reply("JARVIS Mark One online.")
 
     while True:
@@ -77,7 +85,7 @@ def run_voice_mode() -> None:
             if not command:
                 continue
 
-        if not handle_command(command):
+        if not handle_command(command, skills):
             return
 
 
