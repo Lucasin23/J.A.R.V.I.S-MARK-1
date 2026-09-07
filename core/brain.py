@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from memory.memory import recall, remember
+from memory.memory import forget, memory_keys, recall, remember
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -73,6 +74,68 @@ def reset_conversation() -> None:
     _previous_interaction_id = None
 
 
+def status_report() -> str:
+    """Return a safe setup summary without ever exposing credentials."""
+    load_environment()
+    key_configured = bool(os.getenv("GEMINI_API_KEY"))
+    model = os.getenv("GEMINI_MODEL", DEFAULT_MODEL)
+    conversation_state = "active" if _previous_interaction_id else "ready"
+    return (
+        f"Systems nominal. Gemini key: {'configured' if key_configured else 'missing'}. "
+        f"Model: {model}. Conversation: {conversation_state}."
+    )
+
+
+def _local_response(command: str) -> str | None:
+    """Handle useful local commands before spending a Gemini request."""
+    normalised = command.lower().strip().rstrip("?.!")
+
+    if normalised in {"help", "what can you do", "what do you do"}:
+        return (
+            "I can hold a Gemini conversation, remember facts locally, tell you the time, "
+            "and respond by voice. Say remember followed by a fact, ask what I remember, "
+            "or say reset conversation."
+        )
+
+    if normalised in {"status", "system status", "are you online"}:
+        return status_report()
+
+    if normalised in {"what time is it", "what's the time", "tell me the time"}:
+        return f"It is {datetime.now().strftime('%H:%M')}."
+
+    if normalised in {"what is the date", "what's the date", "tell me the date"}:
+        return f"Today is {datetime.now().strftime('%A, %d %B %Y')}."
+
+    if normalised.startswith("remember "):
+        text = command[9:].strip()
+        if " is " in text:
+            key, value = text.split(" is ", 1)
+            remember(key.strip(), value.strip())
+            return f"I'll remember that {key.strip()} is {value.strip()}."
+        return "Say it like: remember my favourite colour is blue."
+
+    if normalised.startswith("what do you remember about "):
+        key = command[len("what do you remember about ") :].strip()
+        value = recall(key)
+        if value:
+            return f"I remember that {key} is {value}."
+        return f"I don't have anything saved about {key}."
+
+    if normalised.startswith("forget "):
+        key = command[len("forget ") :].strip()
+        if not key:
+            return "Tell me which memory to forget."
+        return f"I've forgotten {key}." if forget(key) else f"I had no saved memory for {key}."
+
+    if normalised in {"list memories", "what do you remember"}:
+        keys = memory_keys()
+        if not keys:
+            return "I don't have any saved memories yet."
+        return "I have saved memories for: " + ", ".join(keys) + "."
+
+    return None
+
+
 def think(command: str) -> str:
     """Handle local memory commands or ask Gemini for a spoken answer."""
     global _previous_interaction_id
@@ -80,24 +143,9 @@ def think(command: str) -> str:
     if not command:
         return "I'm listening."
 
-    if command.lower().startswith("remember "):
-        text = command[9:]
-
-        if " is " in text:
-            key, value = text.split(" is ", 1)
-            remember(key.strip(), value.strip())
-            return f"I'll remember that {key.strip()} is {value.strip()}."
-
-        return "Say it like: remember my favourite colour is blue."
-
-    if command.lower().startswith("what do you remember about "):
-        key = command[27:].strip()
-        value = recall(key)
-
-        if value:
-            return f"I remember that {key} is {value}."
-
-        return f"I don't have anything saved about {key}."
+    local_response = _local_response(command)
+    if local_response is not None:
+        return local_response
 
     client = _get_client()
     options: dict[str, Any] = {

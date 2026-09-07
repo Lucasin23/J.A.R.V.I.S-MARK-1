@@ -31,3 +31,18 @@ def remember(key, value):
 def recall(key):
     memory = load_memory()
     return memory.get(key)
+
+
+def forget(key):
+    """Remove one saved memory and report whether it existed."""
+    memory = load_memory()
+    if key not in memory:
+        return False
+    del memory[key]
+    save_memory(memory)
+    return True
+
+
+def memory_keys():
+    """Return memory labels without exposing every saved value by default."""
+    return sorted(load_memory())

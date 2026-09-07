@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import argparse
 
 from core.brain import JarvisConfigurationError, load_environment, reset_conversation, think
 from voice.listener import VoiceListener
@@ -20,7 +21,41 @@ def reply(text: str) -> None:
     speak(text)
 
 
-def main():
+def handle_command(command: str) -> bool:
+    """Process a command and return ``False`` only when JARVIS should exit."""
+    normalised_command = command.lower().strip()
+    if normalised_command in SHUTDOWN_COMMANDS:
+        reply("Shutting down. Goodbye.")
+        return False
+
+    if normalised_command in {"reset conversation", "clear conversation"}:
+        reset_conversation()
+        reply("Conversation reset. Your saved memories are still intact.")
+        return True
+
+    try:
+        response = think(command)
+    except JarvisConfigurationError as error:
+        response = str(error)
+    reply(response)
+    return True
+
+
+def run_text_mode() -> None:
+    """Let you test Gemini and local features without using the microphone."""
+    print("J.A.R.V.I.S MARK I TEXT MODE. Type 'shutdown' to exit.")
+    while True:
+        try:
+            command = input("You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            reply("Shutting down. Goodbye.")
+            return
+        if command and not handle_command(command):
+            return
+
+
+def run_voice_mode() -> None:
     print("J.A.R.V.I.S MARK I ONLINE.")
     print(f"Systems initialized. Say 'Hey {WAKE_WORD.title()}' to begin.\n")
 
@@ -42,21 +77,19 @@ def main():
             if not command:
                 continue
 
-        normalised_command = command.lower().strip()
-        if normalised_command in SHUTDOWN_COMMANDS:
-            reply("Shutting down. Goodbye.")
+        if not handle_command(command):
             return
 
-        if normalised_command in {"reset conversation", "clear conversation"}:
-            reset_conversation()
-            reply("Conversation reset. Your saved memories are still intact.")
-            continue
 
-        try:
-            response = think(command)
-        except JarvisConfigurationError as error:
-            response = str(error)
-        reply(response)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run J.A.R.V.I.S MARK 1.")
+    parser.add_argument(
+        "--text",
+        action="store_true",
+        help="Run without the microphone so you can test JARVIS in the terminal.",
+    )
+    args = parser.parse_args()
+    run_text_mode() if args.text else run_voice_mode()
 
 
 if __name__ == "__main__":

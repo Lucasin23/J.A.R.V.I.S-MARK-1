@@ -19,11 +19,20 @@ A local voice assistant powered by the Gemini API. Say **“Hey Jarvis”** foll
    python3 main.py
    ```
 
+   To test the conversation without the microphone, use:
+
+   ```bash
+   python3 main.py --text
+   ```
+
 ## Commands
 
 - “Hey Jarvis, what can you do?”
 - “Hey Jarvis, remember my favourite colour is blue.”
 - “Hey Jarvis, what do you remember about my favourite colour?”
+- “Hey Jarvis, forget my favourite colour.”
+- “Hey Jarvis, what time is it?”
+- “Hey Jarvis, status.”
 - “Hey Jarvis, reset conversation.”
 - “Hey Jarvis, shutdown.”
 
