@@ -8,13 +8,18 @@ def load_memory():
     if not MEMORY_FILE.exists():
         return {}
 
-    with open(MEMORY_FILE, "r", encoding="utf-8") as file:
-        return json.load(file)
+    try:
+        with open(MEMORY_FILE, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        return {}
 
 
 def save_memory(memory):
-    with open(MEMORY_FILE, "w", encoding="utf-8") as file:
+    temporary_file = MEMORY_FILE.with_suffix(".tmp")
+    with open(temporary_file, "w", encoding="utf-8") as file:
         json.dump(memory, file, indent=4, ensure_ascii=False)
+    temporary_file.replace(MEMORY_FILE)
 
 
 def remember(key, value):
